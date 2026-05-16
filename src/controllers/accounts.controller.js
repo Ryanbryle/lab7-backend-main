@@ -115,7 +115,7 @@ async function register(req, res) {
 
     const existing = await findAccountByEmail(email);
     if (existing) {
-        await sendAlreadyRegisteredEmail(email, getOrigin(req));
+        sendAlreadyRegisteredEmail(email, getOrigin(req)).catch(console.error);
         return res.json({ message: 'Registration successful — please check your email' });
     }
 
@@ -137,7 +137,7 @@ async function register(req, res) {
         db.save();
     }
 
-    await sendVerificationEmail(email, getOrigin(req), verificationToken);
+    sendVerificationEmail(email, getOrigin(req), verificationToken).catch(console.error);
 
     // Include verification link in response (works even if email is blocked on hosting)
     const verifyUrl = `${getOrigin(req)}/account/verify-email?token=${verificationToken}`;
@@ -190,7 +190,7 @@ async function forgotPassword(req, res) {
         db.save();
     }
 
-    await sendPasswordResetEmail(email, getOrigin(req), resetToken);
+    sendPasswordResetEmail(email, getOrigin(req), resetToken).catch(console.error);
     res.json({ message: 'If that email exists, a reset link has been sent' });
 }
 
