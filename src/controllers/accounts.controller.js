@@ -127,13 +127,13 @@ async function register(req, res) {
     if (USE_MYSQL) {
         const { pool } = getDb();
         await pool.query(
-            `INSERT INTO accounts (title,firstName,lastName,email,passwordHash,role,verificationToken) VALUES(?,?,?,?,?,?,?)`,
+            `INSERT INTO accounts (title,firstName,lastName,email,passwordHash,role,verificationToken,verified) VALUES(?,?,?,?,?,?,?,NOW())`,
             [title||null, firstName, lastName, email, passwordHash, role, verificationToken]
         );
     } else {
         const db = getDb();
         const id = db.accounts.length > 0 ? Math.max(...db.accounts.map(x=>x.id))+1 : 1;
-        db.accounts.push({ id, title:title||null, firstName, lastName, email, passwordHash, role, verificationToken, verified:null, resetToken:null, resetTokenExpires:null, created:new Date().toISOString(), updated:null });
+        db.accounts.push({ id, title:title||null, firstName, lastName, email, passwordHash, role, verificationToken, verified:new Date().toISOString(), resetToken:null, resetTokenExpires:null, created:new Date().toISOString(), updated:null });
         db.save();
     }
 

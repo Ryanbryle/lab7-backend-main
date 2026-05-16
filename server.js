@@ -16,7 +16,9 @@ const PORT = process.env.PORT || 4000;
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:4200',
+    origin: function (origin, callback) {
+        callback(null, true);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
