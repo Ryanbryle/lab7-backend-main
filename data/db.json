@@ -1,0 +1,117 @@
+{
+  "accounts": [
+    {
+      "id": 1,
+      "title": "Mr",
+      "firstName": "Admin",
+      "lastName": "User",
+      "email": "admin@lab7.com",
+      "passwordHash": "$2a$10$kAfZMbUNkdvUyuZjMNew/OWNqpqBNAOZZJONToa/Msu73yYnIoJMG",
+      "role": "Admin",
+      "verificationToken": null,
+      "verified": "2026-05-15T15:47:56.649Z",
+      "resetToken": null,
+      "resetTokenExpires": null,
+      "created": "2026-05-15T15:46:50.432Z",
+      "updated": null
+    },
+    {
+      "id": 2,
+      "title": "Mrs",
+      "firstName": "user",
+      "lastName": "admin",
+      "email": "user.admin@lab7.com",
+      "passwordHash": "$2a$10$/X2z5Oud3vz4CDccAC24Yer/6Lcb2oEKyapRe.9sb8IGSbRpEb6VW",
+      "role": "User",
+      "verificationToken": "360db137-9df8-4f40-9dc7-fbf3bbabd798",
+      "verified": null,
+      "resetToken": null,
+      "resetTokenExpires": null,
+      "created": "2026-05-15T15:56:29.206Z",
+      "updated": null
+    },
+    {
+      "id": 3,
+      "title": "Mr",
+      "firstName": "Adrian",
+      "lastName": "Badon",
+      "email": "adrianbadon25@gmail.com",
+      "passwordHash": "$2a$10$PietVXA/Nm6t3RpJuplD7OA8pUiI4MkB1Csx3tgtpNNiRkpTya4OK",
+      "role": "User",
+      "verificationToken": "d9402005-c160-4682-967b-0a69a009536f",
+      "verified": null,
+      "resetToken": null,
+      "resetTokenExpires": null,
+      "created": "2026-05-16T16:19:41.014Z",
+      "updated": null
+    }
+  ],
+  "refreshTokens": [
+    {
+      "id": 1778860090534,
+      "accountId": 1,
+      "token": "bd0a02d3-9c3e-44eb-9b38-0be3a14b7b90",
+      "expires": "2026-05-22T15:48:10.534Z",
+      "created": "2026-05-15T15:48:10.534Z",
+      "createdByIp": "::1",
+      "revoked": "2026-05-15T15:50:59.444Z",
+      "revokedByIp": "::1",
+      "replacedByToken": "6cf9f8b1-e811-48d9-8d5d-b35cbfd7c29d"
+    },
+    {
+      "id": 1778860112841,
+      "accountId": 1,
+      "token": "1f78eb53-6118-4e4d-b6fd-31b238bcdc92",
+      "expires": "2026-05-22T15:48:32.841Z",
+      "created": "2026-05-15T15:48:32.841Z",
+      "createdByIp": "::1",
+      "revoked": "2026-05-15T15:48:36.794Z",
+      "revokedByIp": "::1",
+      "replacedByToken": "e279acac-4385-4caf-8124-ba9c2b471393"
+    },
+    {
+      "id": 1778860116760,
+      "accountId": 1,
+      "token": "e279acac-4385-4caf-8124-ba9c2b471393",
+      "expires": "2026-05-22T15:48:36.760Z",
+      "created": "2026-05-15T15:48:36.760Z",
+      "createdByIp": "::1",
+      "revoked": "2026-05-15T15:55:52.723Z",
+      "revokedByIp": "::1",
+      "replacedByToken": null
+    },
+    {
+      "id": 1778860259443,
+      "accountId": 1,
+      "token": "6cf9f8b1-e811-48d9-8d5d-b35cbfd7c29d",
+      "expires": "2026-05-22T15:50:59.443Z",
+      "created": "2026-05-15T15:50:59.443Z",
+      "createdByIp": "::1",
+      "revoked": "2026-05-15T15:51:03.586Z",
+      "revokedByIp": "::1",
+      "replacedByToken": null
+    },
+    {
+      "id": 1778860468881,
+      "accountId": 1,
+      "token": "c68e6ae8-5f97-4cf7-95d7-4fef120c48da",
+      "expires": "2026-05-22T15:54:28.881Z",
+      "created": "2026-05-15T15:54:28.881Z",
+      "createdByIp": "::1",
+      "revoked": null,
+      "revokedByIp": null,
+      "replacedByToken": null
+    },
+    {
+      "id": 1778860554311,
+      "accountId": 1,
+      "token": "23b98562-adcd-4dc6-90c4-27d10622fc02",
+      "expires": "2026-05-22T15:55:54.311Z",
+      "created": "2026-05-15T15:55:54.312Z",
+      "createdByIp": "::1",
+      "revoked": "2026-05-15T15:55:58.405Z",
+      "revokedByIp": "::1",
+      "replacedByToken": null
+    }
+  ]
+}
