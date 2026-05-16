@@ -191,7 +191,11 @@ async function forgotPassword(req, res) {
     }
 
     sendPasswordResetEmail(email, getOrigin(req), resetToken).catch(console.error);
-    res.json({ message: 'If that email exists, a reset link has been sent' });
+    const resetUrl = `${getOrigin(req)}/account/reset-password?token=${resetToken}`;
+    res.json({ 
+        message: 'If that email exists, a reset link has been sent',
+        resetLink: resetUrl 
+    });
 }
 
 // ─── POST /accounts/validate-reset-token ─────────────────────────────────────
