@@ -1,53 +1,19 @@
-# Lab7 Auth Backend — README
+# Lab7 Backend - Authentication API
 
-## Live Demo
-- **API:** https://lab7-backend-6o88.onrender.com
-- **API Docs (Swagger):** https://lab7-backend-6o88.onrender.com/api-docs
-- **Frontend:** https://lab7-frontend.onrender.com
+This is the backend component of the Lab7 full-stack authentication boilerplate, built with Node.js, Express, and MySQL.
+
+## Live Links
+* **Frontend Application:** https://lab7-frontend.onrender.com
+* **Backend API (Swagger):** https://lab7-backend-6o88-ymfb.onrender.com/api-docs
+* **Frontend Repository:** https://github.com/lilad25/Lab7
 
 ## Setup Instructions
+1. Clone the repository
+2. Run `npm install` to install dependencies
+3. Set up your `.env` file with `DATABASE_URL`, `JWT_SECRET`, and email settings.
+4. Run `npm start` or `npm run dev` to start the backend server at `http://localhost:4000`.
 
-### Local Development
-```bash
-# Install dependencies
-npm install
-
-# Create .env file (see Environment Variables below)
-# Start server
-npm start
-```
-
-### Environment Variables
-Create a `.env` file in the root (never commit this):
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `PORT` | Server port | `4000` |
-| `JWT_SECRET` | Secret key for JWT signing | `your-secret-key` |
-| `CORS_ORIGIN` | Frontend URL for CORS | `https://lab7-frontend.onrender.com` |
-| `DATABASE_URL` | PostgreSQL URL (set by Render auto) | `postgres://...` |
-| `NODE_ENV` | Environment | `production` |
-
-> **Security Note:** No secrets are hardcoded. All sensitive data is handled via `.env` (locally) or Render environment variables (production). The `.env` file is listed in `.gitignore`.
-
-> **Database Note:** Uses PostgreSQL in production (via `DATABASE_URL` on Render) and a local JSON file for development (no installation needed).
-
-### API Endpoints
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/accounts/register` | None | Register new account |
-| POST | `/accounts/authenticate` | None | Login |
-| POST | `/accounts/verify-email` | None | Verify email |
-| POST | `/accounts/refresh-token` | Cookie | Refresh JWT |
-| POST | `/accounts/revoke-token` | JWT | Logout |
-| POST | `/accounts/forgot-password` | None | Request reset |
-| POST | `/accounts/reset-password` | None | Reset password |
-| GET | `/accounts` | Admin | List all accounts |
-| GET/PUT/DELETE | `/accounts/:id` | JWT | Manage account |
-
-## Security Practices
-- JWT tokens expire in 15 minutes (short-lived)
-- Refresh tokens rotate on every use and are stored in DB
-- Passwords hashed with bcrypt (cost factor 10)
-- CORS restricted to frontend origin only
-- No secrets committed to repository
+## Production Configuration
+- **Database**: Connects to remote Aiven MySQL instance using `DATABASE_URL` environment variable.
+- **Emails**: Uses `ethereal.email` for testing verification and reset emails. Check server console logs for the Ethereal message links.
+- **Security**: JWT and passwords are not hardcoded. Handled via environment variables securely.
