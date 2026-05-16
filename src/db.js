@@ -24,52 +24,53 @@ function getJsonDb() {
 }
 
 // ─── PostgreSQL (Production on Render) ───────────────────────────────────────
-let pgPool = null;
+let mysqlPool = null;
 
-async function initPgDb() {
-    const { Pool } = require('pg');
-    pgPool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+async function initMysqlDb() {
+    const mysql = require('mysql2/promise');
+    mysqlPool = mysql.createPool(process.env.DATABASE_URL);
 
-    await pgPool.query(`
+    await mysqlPool.query(`
         CREATE TABLE IF NOT EXISTS accounts (
-            id SERIAL PRIMARY KEY,
+            id INT AUTO_INCREMENT PRIMARY KEY,
             title VARCHAR(10),
-            "firstName" VARCHAR(100) NOT NULL,
-            "lastName" VARCHAR(100) NOT NULL,
+            firstName VARCHAR(100) NOT NULL,
+            lastName VARCHAR(100) NOT NULL,
             email VARCHAR(255) NOT NULL UNIQUE,
-            "passwordHash" VARCHAR(255) NOT NULL,
+            passwordHash VARCHAR(255) NOT NULL,
             role VARCHAR(10) NOT NULL DEFAULT 'User',
-            "verificationToken" VARCHAR(255),
-            verified TIMESTAMPTZ,
-            "resetToken" VARCHAR(255),
-            "resetTokenExpires" TIMESTAMPTZ,
-            "passwordReset" TIMESTAMPTZ,
-            created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated TIMESTAMPTZ
+            verificationToken VARCHAR(255),
+            verified DATETIME,
+            resetToken VARCHAR(255),
+            resetTokenExpires DATETIME,
+            passwordReset DATETIME,
+            created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated DATETIME ON UPDATE CURRENT_TIMESTAMP
         )
     `);
-    await pgPool.query(`
+    await mysqlPool.query(`
         CREATE TABLE IF NOT EXISTS refresh_tokens (
-            id SERIAL PRIMARY KEY,
-            "accountId" INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            accountId INT NOT NULL,
             token VARCHAR(255) NOT NULL UNIQUE,
-            expires TIMESTAMPTZ NOT NULL,
-            created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            "createdByIp" VARCHAR(45),
-            revoked TIMESTAMPTZ,
-            "revokedByIp" VARCHAR(45),
-            "replacedByToken" VARCHAR(255)
+            expires DATETIME NOT NULL,
+            created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            createdByIp VARCHAR(45),
+            revoked DATETIME,
+            revokedByIp VARCHAR(45),
+            replacedByToken VARCHAR(255),
+            FOREIGN KEY (accountId) REFERENCES accounts(id) ON DELETE CASCADE
         )
     `);
-    console.log('✅ PostgreSQL database ready');
+    console.log('✅ MySQL database ready');
 }
 
 // ─── Unified DB Interface ─────────────────────────────────────────────────────
-const USE_PG = !!process.env.DATABASE_URL;
+const USE_MYSQL = !!process.env.DATABASE_URL;
 
 async function initializeDatabase() {
-    if (USE_PG) {
-        await initPgDb();
+    if (USE_MYSQL) {
+        await initMysqlDb();
     } else {
         initJsonDb();
     }
@@ -77,14 +78,14 @@ async function initializeDatabase() {
 
 // Returns a unified adapter regardless of backend
 function getDb() {
-    if (USE_PG) {
+    if (USE_MYSQL) {
         return {
-            isPg: true,
-            pool: pgPool,
-            // pg methods are async — controllers check isPg and use pool directly
+            isMysql: true,
+            pool: mysqlPool,
+            // pg methods are async — controllers check isMysql and use pool directly
         };
     }
     return getJsonDb();
 }
 
-module.exports = { initializeDatabase, getDb, USE_PG };
+module.exports = { initializeDatabase, getDb, USE_MYSQL };

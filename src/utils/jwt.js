@@ -34,29 +34,29 @@ function revokeTokenJson(token, ipAddress, replacedByToken = null) {
 }
 
 // ─── PostgreSQL methods ───────────────────────────────────────────────────────
-async function generateRefreshTokenPg(accountId, ipAddress) {
+async function generateRefreshTokenMysql(accountId, ipAddress) {
     const { pool } = getDb();
     const token = uuidv4();
     const expires = new Date(Date.now() + REFRESH_DAYS * 24 * 60 * 60 * 1000);
     await pool.query(
-        `INSERT INTO refresh_tokens ("accountId",token,expires,"createdByIp") VALUES($1,$2,$3,$4)`,
+        `INSERT INTO refresh_tokens (accountId,token,expires,createdByIp) VALUES(?,?,?,?)`,
         [accountId, token, expires, ipAddress]
     );
     return token;
 }
 
-async function getRefreshTokenPg(token) {
+async function getRefreshTokenMysql(token) {
     const { pool } = getDb();
-    const r = await pool.query('SELECT * FROM refresh_tokens WHERE token=$1', [token]);
-    const rt = r.rows[0];
+    const [r] = await pool.query('SELECT * FROM refresh_tokens WHERE token=?', [token]);
+    const rt = r[0];
     if (!rt || new Date() > new Date(rt.expires) || rt.revoked) throw new Error('Invalid token');
     return rt;
 }
 
-async function revokeTokenPg(token, ipAddress, replacedByToken = null) {
+async function revokeTokenMysql(token, ipAddress, replacedByToken = null) {
     const { pool } = getDb();
     await pool.query(
-        `UPDATE refresh_tokens SET revoked=NOW(),"revokedByIp"=$1,"replacedByToken"=$2 WHERE token=$3`,
+        `UPDATE refresh_tokens SET revoked=NOW(),revokedByIp=?,replacedByToken=? WHERE token=?`,
         [ipAddress, replacedByToken, token]
     );
 }
@@ -79,5 +79,5 @@ function verifyJwt(token) {
 module.exports = {
     generateJwtToken, verifyJwt, setRefreshTokenCookie,
     generateRefreshTokenJson, getRefreshTokenJson, revokeTokenJson,
-    generateRefreshTokenPg, getRefreshTokenPg, revokeTokenPg
+    generateRefreshTokenMysql, getRefreshTokenMysql, revokeTokenMysql
 };

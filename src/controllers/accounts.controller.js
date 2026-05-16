@@ -1,14 +1,14 @@
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
-const { getDb, USE_PG } = require('../db');
+const { getDb, USE_MYSQL } = require('../db');
 const {
     generateJwtToken,
     generateRefreshTokenJson,
-    generateRefreshTokenPg,
+    generateRefreshTokenMysql,
     getRefreshTokenJson,
-    getRefreshTokenPg,
+    getRefreshTokenMysql,
     revokeTokenJson,
-    revokeTokenPg,
+    revokeTokenMysql,
     setRefreshTokenCookie
 } = require('../utils/jwt');
 const {
@@ -36,28 +36,28 @@ function basicDetails(a) {
 
 // ─── Helper: get/save via correct backend ────────────────────────────────────
 async function findAccountByEmail(email) {
-    if (USE_PG) {
+    if (USE_MYSQL) {
         const { pool } = getDb();
-        const r = await pool.query('SELECT * FROM accounts WHERE email=$1', [email]);
-        return r.rows[0];
+        const [r] = await pool.query('SELECT * FROM accounts WHERE email=?', [email]);
+        return r[0];
     }
     return getDb().accounts.find(x => x.email === email);
 }
 
 async function findAccountById(id) {
-    if (USE_PG) {
+    if (USE_MYSQL) {
         const { pool } = getDb();
-        const r = await pool.query('SELECT * FROM accounts WHERE id=$1', [id]);
-        return r.rows[0];
+        const [r] = await pool.query('SELECT * FROM accounts WHERE id=?', [id]);
+        return r[0];
     }
     return getDb().accounts.find(x => x.id === id);
 }
 
 async function countAccounts() {
-    if (USE_PG) {
+    if (USE_MYSQL) {
         const { pool } = getDb();
-        const r = await pool.query('SELECT COUNT(*) as count FROM accounts');
-        return parseInt(r.rows[0].count);
+        const [r] = await pool.query('SELECT COUNT(*) as count FROM accounts');
+        return parseInt(r[0].count);
     }
     return getDb().accounts.length;
 }
@@ -76,8 +76,8 @@ async function authenticate(req, res) {
     }
 
     const jwtToken = generateJwtToken(account);
-    const refreshToken = USE_PG
-        ? await generateRefreshTokenPg(account.id, req.ip)
+    const refreshToken = USE_MYSQL
+        ? await generateRefreshTokenMysql(account.id, req.ip)
         : generateRefreshTokenJson(account.id, req.ip);
     setRefreshTokenCookie(res, refreshToken);
     res.json({ ...basicDetails(account), jwtToken });
@@ -88,12 +88,12 @@ async function refreshToken(req, res) {
     const token = req.cookies.refreshToken;
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
     try {
-        const rt = USE_PG ? await getRefreshTokenPg(token) : getRefreshTokenJson(token);
+        const rt = USE_MYSQL ? await getRefreshTokenMysql(token) : getRefreshTokenJson(token);
         const account = await findAccountById(rt.accountId);
-        const newToken = USE_PG
-            ? await generateRefreshTokenPg(account.id, req.ip)
+        const newToken = USE_MYSQL
+            ? await generateRefreshTokenMysql(account.id, req.ip)
             : generateRefreshTokenJson(account.id, req.ip);
-        USE_PG ? await revokeTokenPg(token, req.ip, newToken) : revokeTokenJson(token, req.ip, newToken);
+        USE_MYSQL ? await revokeTokenMysql(token, req.ip, newToken) : revokeTokenJson(token, req.ip, newToken);
         setRefreshTokenCookie(res, newToken);
         res.json({ ...basicDetails(account), jwtToken: generateJwtToken(account) });
     } catch { return res.status(401).json({ message: 'Unauthorized' }); }
@@ -103,7 +103,7 @@ async function refreshToken(req, res) {
 async function revokeTokenHandler(req, res) {
     const token = req.body.token || req.cookies.refreshToken;
     if (!token) return res.status(400).json({ message: 'Token is required' });
-    USE_PG ? await revokeTokenPg(token, req.ip) : revokeTokenJson(token, req.ip);
+    USE_MYSQL ? await revokeTokenMysql(token, req.ip) : revokeTokenJson(token, req.ip);
     res.json({ message: 'Token revoked' });
 }
 
@@ -124,10 +124,10 @@ async function register(req, res) {
     const passwordHash = bcrypt.hashSync(password, 10);
     const verificationToken = uuidv4();
 
-    if (USE_PG) {
+    if (USE_MYSQL) {
         const { pool } = getDb();
         await pool.query(
-            `INSERT INTO accounts (title,"firstName","lastName",email,"passwordHash",role,"verificationToken") VALUES($1,$2,$3,$4,$5,$6,$7)`,
+            `INSERT INTO accounts (title,firstName,lastName,email,passwordHash,role,verificationToken) VALUES(?,?,?,?,?,?,?)`,
             [title||null, firstName, lastName, email, passwordHash, role, verificationToken]
         );
     } else {
@@ -152,11 +152,11 @@ async function verifyEmail(req, res) {
     const { token } = req.body;
     if (!token) return res.status(400).json({ message: 'Token is required' });
 
-    if (USE_PG) {
+    if (USE_MYSQL) {
         const { pool } = getDb();
-        const r = await pool.query('SELECT * FROM accounts WHERE "verificationToken"=$1', [token]);
-        if (!r.rows[0]) return res.status(400).json({ message: 'Verification failed' });
-        await pool.query('UPDATE accounts SET verified=NOW(),"verificationToken"=NULL WHERE id=$1', [r.rows[0].id]);
+        const [r] = await pool.query('SELECT * FROM accounts WHERE verificationToken=?', [token]);
+        if (!r[0]) return res.status(400).json({ message: 'Verification failed' });
+        await pool.query('UPDATE accounts SET verified=NOW(),verificationToken=NULL WHERE id=?', [r[0].id]);
     } else {
         const db = getDb();
         const account = db.accounts.find(x => x.verificationToken === token);
@@ -179,9 +179,9 @@ async function forgotPassword(req, res) {
     const resetToken = uuidv4();
     const resetExpires = new Date(Date.now() + 24*60*60*1000);
 
-    if (USE_PG) {
+    if (USE_MYSQL) {
         const { pool } = getDb();
-        await pool.query('UPDATE accounts SET "resetToken"=$1,"resetTokenExpires"=$2 WHERE id=$3', [resetToken, resetExpires, account.id]);
+        await pool.query('UPDATE accounts SET resetToken=?,resetTokenExpires=? WHERE id=?', [resetToken, resetExpires, account.id]);
     } else {
         const db = getDb();
         const acc = db.accounts.find(x => x.email === email);
@@ -200,10 +200,10 @@ async function validateResetToken(req, res) {
     if (!token) return res.status(400).json({ message: 'Token is required' });
 
     let found;
-    if (USE_PG) {
+    if (USE_MYSQL) {
         const { pool } = getDb();
-        const r = await pool.query('SELECT id FROM accounts WHERE "resetToken"=$1 AND "resetTokenExpires">NOW()', [token]);
-        found = r.rows[0];
+        const [r] = await pool.query('SELECT id FROM accounts WHERE resetToken=? AND resetTokenExpires>NOW()', [token]);
+        found = r[0];
     } else {
         found = getDb().accounts.find(x => x.resetToken===token && x.resetTokenExpires && new Date()<new Date(x.resetTokenExpires));
     }
@@ -218,11 +218,11 @@ async function resetPassword(req, res) {
     if (password !== confirmPassword) return res.status(400).json({ message: 'Passwords do not match' });
 
     const hash = bcrypt.hashSync(password, 10);
-    if (USE_PG) {
+    if (USE_MYSQL) {
         const { pool } = getDb();
-        const r = await pool.query('SELECT id FROM accounts WHERE "resetToken"=$1 AND "resetTokenExpires">NOW()', [token]);
-        if (!r.rows[0]) return res.status(400).json({ message: 'Invalid token' });
-        await pool.query(`UPDATE accounts SET "passwordHash"=$1,verified=COALESCE(verified,NOW()),"resetToken"=NULL,"resetTokenExpires"=NULL,"passwordReset"=NOW() WHERE id=$2`, [hash, r.rows[0].id]);
+        const [r] = await pool.query('SELECT id FROM accounts WHERE resetToken=? AND resetTokenExpires>NOW()', [token]);
+        if (!r[0]) return res.status(400).json({ message: 'Invalid token' });
+        await pool.query(`UPDATE accounts SET passwordHash=?,verified=COALESCE(verified,NOW()),resetToken=NULL,resetTokenExpires=NULL,passwordReset=NOW() WHERE id=?`, [hash, r[0].id]);
     } else {
         const db = getDb();
         const acc = db.accounts.find(x => x.resetToken===token && x.resetTokenExpires && new Date()<new Date(x.resetTokenExpires));
@@ -237,10 +237,10 @@ async function resetPassword(req, res) {
 
 // ─── GET /accounts ────────────────────────────────────────────────────────────
 async function getAll(req, res) {
-    if (USE_PG) {
+    if (USE_MYSQL) {
         const { pool } = getDb();
-        const r = await pool.query('SELECT * FROM accounts');
-        return res.json(r.rows.map(basicDetails));
+        const [r] = await pool.query('SELECT * FROM accounts');
+        return res.json(r.map(basicDetails));
     }
     res.json(getDb().accounts.map(basicDetails));
 }
@@ -264,9 +264,9 @@ async function create(req, res) {
     if (existing) return res.status(400).json({ message: `Email ${email} is already registered` });
 
     const hash = bcrypt.hashSync(password, 10);
-    if (USE_PG) {
+    if (USE_MYSQL) {
         const { pool } = getDb();
-        await pool.query(`INSERT INTO accounts (title,"firstName","lastName",email,"passwordHash",role,verified) VALUES($1,$2,$3,$4,$5,$6,NOW())`, [title||null,firstName,lastName,email,hash,role]);
+        await pool.query(`INSERT INTO accounts (title,firstName,lastName,email,passwordHash,role,verified) VALUES(?,?,?,?,?,?,NOW())`, [title||null,firstName,lastName,email,hash,role]);
     } else {
         const db = getDb();
         const id = db.accounts.length > 0 ? Math.max(...db.accounts.map(x=>x.id))+1 : 1;
@@ -286,21 +286,21 @@ async function update(req, res) {
     const { title, firstName, lastName, email, password, confirmPassword, role } = req.body;
     if (password && password !== confirmPassword) return res.status(400).json({ message: 'Passwords do not match' });
 
-    if (USE_PG) {
+    if (USE_MYSQL) {
         const { pool } = getDb();
         const sets = ['updated=NOW()'];
         const vals = [];
         let i = 1;
         if (title!==undefined){sets.push(`title=$${i++}`);vals.push(title);}
-        if (firstName){sets.push(`"firstName"=$${i++}`);vals.push(firstName);}
-        if (lastName){sets.push(`"lastName"=$${i++}`);vals.push(lastName);}
+        if (firstName){sets.push(`firstName=$${i++}`);vals.push(firstName);}
+        if (lastName){sets.push(`lastName=$${i++}`);vals.push(lastName);}
         if (email){sets.push(`email=$${i++}`);vals.push(email);}
-        if (password){sets.push(`"passwordHash"=$${i++}`);vals.push(bcrypt.hashSync(password,10));}
+        if (password){sets.push(`passwordHash=$${i++}`);vals.push(bcrypt.hashSync(password,10));}
         if (role && req.user.role==='Admin'){sets.push(`role=$${i++}`);vals.push(role);}
         vals.push(id);
         await pool.query(`UPDATE accounts SET ${sets.join(',')} WHERE id=$${i}`, vals);
-        const r = await pool.query('SELECT * FROM accounts WHERE id=$1',[id]);
-        return res.json(basicDetails(r.rows[0]));
+        const [r] = await pool.query('SELECT * FROM accounts WHERE id=?',[id]);
+        return res.json(basicDetails(r[0]));
     } else {
         const db = getDb();
         const acc = db.accounts.find(x=>x.id===id);
@@ -323,9 +323,9 @@ async function deleteAccount(req, res) {
     if (!account) return res.status(404).json({ message: 'Account not found' });
     if (req.user.role !== 'Admin' && req.user.id !== id) return res.status(401).json({ message: 'Unauthorized' });
 
-    if (USE_PG) {
+    if (USE_MYSQL) {
         const { pool } = getDb();
-        await pool.query('DELETE FROM accounts WHERE id=$1', [id]);
+        await pool.query('DELETE FROM accounts WHERE id=?', [id]);
     } else {
         const db = getDb();
         const idx = db.accounts.findIndex(x=>x.id===id);
