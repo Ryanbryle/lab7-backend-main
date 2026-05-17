@@ -304,15 +304,14 @@ async function update(req, res) {
         const { pool } = getDb();
         const sets = ['updated=NOW()'];
         const vals = [];
-        let i = 1;
-        if (title!==undefined){sets.push(`title=$${i++}`);vals.push(title);}
-        if (firstName){sets.push(`firstName=$${i++}`);vals.push(firstName);}
-        if (lastName){sets.push(`lastName=$${i++}`);vals.push(lastName);}
-        if (email){sets.push(`email=$${i++}`);vals.push(email);}
-        if (password){sets.push(`passwordHash=$${i++}`);vals.push(bcrypt.hashSync(password,10));}
-        if (role && req.user.role==='Admin'){sets.push(`role=$${i++}`);vals.push(role);}
+        if (title!==undefined){sets.push(`title=?`);vals.push(title);}
+        if (firstName){sets.push(`firstName=?`);vals.push(firstName);}
+        if (lastName){sets.push(`lastName=?`);vals.push(lastName);}
+        if (email){sets.push(`email=?`);vals.push(email);}
+        if (password){sets.push(`passwordHash=?`);vals.push(bcrypt.hashSync(password,10));}
+        if (role && req.user.role==='Admin'){sets.push(`role=?`);vals.push(role);}
         vals.push(id);
-        await pool.query(`UPDATE accounts SET ${sets.join(',')} WHERE id=$${i}`, vals);
+        await pool.query(`UPDATE accounts SET ${sets.join(',')} WHERE id=?`, vals);
         const [r] = await pool.query('SELECT * FROM accounts WHERE id=?',[id]);
         return res.json(basicDetails(r[0]));
     } else {
