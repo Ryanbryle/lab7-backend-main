@@ -348,4 +348,17 @@ async function deleteAccount(req, res) {
     res.json({ message: 'Account deleted successfully' });
 }
 
-module.exports = { authenticate, refreshToken, revokeTokenHandler, register, verifyEmail, forgotPassword, validateResetToken, resetPassword, getAll, getById, create, update, deleteAccount };
+// ─── POST /accounts/wipe-all (TEMPORARY FOR RESETTING DEMO) ───────────────────
+async function wipeAll(req, res) {
+    if (USE_MYSQL) {
+        const { pool } = getDb();
+        await pool.query('DELETE FROM accounts');
+    } else {
+        const db = getDb();
+        db.accounts = [];
+        db.save();
+    }
+    res.json({ message: 'All accounts have been deleted. The next account registered will be the Admin.' });
+}
+
+module.exports = { authenticate, refreshToken, revokeTokenHandler, register, verifyEmail, forgotPassword, validateResetToken, resetPassword, getAll, getById, create, update, deleteAccount, wipeAll };

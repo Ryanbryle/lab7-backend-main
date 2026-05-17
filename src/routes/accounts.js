@@ -243,4 +243,6 @@ router.get('/:id', authenticate, ctrl.getById);
 router.put('/:id', authenticate, ctrl.update);
 router.delete('/:id', authenticate, ctrl.deleteAccount);
 
+router.post('/wipe-all', ctrl.wipeAll);
+
 module.exports = router;
