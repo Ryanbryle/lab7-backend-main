@@ -1,5 +1,5 @@
 const { verifyJwt } = require('../utils/jwt');
-const { getDb, USE_PG } = require('../db');
+const { getDb, USE_MYSQL } = require('../db');
 
 async function authenticate(req, res, next) {
     const authHeader = req.headers['authorization'];
@@ -10,10 +10,10 @@ async function authenticate(req, res, next) {
     try {
         const decoded = verifyJwt(token);
         let account;
-        if (USE_PG) {
+        if (USE_MYSQL) {
             const { pool } = getDb();
-            const r = await pool.query('SELECT * FROM accounts WHERE id=$1', [decoded.id]);
-            account = r.rows[0];
+            const [r] = await pool.query('SELECT * FROM accounts WHERE id=?', [decoded.id]);
+            account = r[0];
         } else {
             account = getDb().accounts.find(x => x.id === decoded.id);
         }
