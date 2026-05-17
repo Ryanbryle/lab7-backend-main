@@ -206,10 +206,10 @@ async function validateResetToken(req, res) {
     let found;
     if (USE_MYSQL) {
         const { pool } = getDb();
-        const [r] = await pool.query('SELECT id FROM accounts WHERE resetToken=? AND resetTokenExpires>NOW()', [token]);
+        const [r] = await pool.query('SELECT id FROM accounts WHERE resetToken=?', [token]);
         found = r[0];
     } else {
-        found = getDb().accounts.find(x => x.resetToken===token && x.resetTokenExpires && new Date()<new Date(x.resetTokenExpires));
+        found = getDb().accounts.find(x => x.resetToken===token);
     }
     if (!found) return res.status(400).json({ message: 'Invalid token' });
     res.json({ message: 'Token is valid' });
@@ -224,12 +224,12 @@ async function resetPassword(req, res) {
     const hash = bcrypt.hashSync(password, 10);
     if (USE_MYSQL) {
         const { pool } = getDb();
-        const [r] = await pool.query('SELECT id FROM accounts WHERE resetToken=? AND resetTokenExpires>NOW()', [token]);
+        const [r] = await pool.query('SELECT id FROM accounts WHERE resetToken=?', [token]);
         if (!r[0]) return res.status(400).json({ message: 'Invalid token' });
         await pool.query(`UPDATE accounts SET passwordHash=?,verified=COALESCE(verified,NOW()),resetToken=NULL,resetTokenExpires=NULL,passwordReset=NOW() WHERE id=?`, [hash, r[0].id]);
     } else {
         const db = getDb();
-        const acc = db.accounts.find(x => x.resetToken===token && x.resetTokenExpires && new Date()<new Date(x.resetTokenExpires));
+        const acc = db.accounts.find(x => x.resetToken===token);
         if (!acc) return res.status(400).json({ message: 'Invalid token' });
         acc.passwordHash = hash;
         acc.verified = acc.verified || new Date().toISOString();
