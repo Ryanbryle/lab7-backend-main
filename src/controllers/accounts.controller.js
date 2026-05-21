@@ -115,7 +115,12 @@ async function register(req, res) {
 
     const existing = await findAccountByEmail(email);
     if (existing) {
-        sendAlreadyRegisteredEmail(email, getOrigin(req)).catch(console.error);
+        if (existing.verified) {
+            sendAlreadyRegisteredEmail(email, getOrigin(req)).catch(console.error);
+        } else {
+            // Account exists but is not verified — resend the verification email
+            sendVerificationEmail(email, getOrigin(req), existing.verificationToken).catch(console.error);
+        }
         return res.json({ message: 'Registration successful — please check your email' });
     }
 
