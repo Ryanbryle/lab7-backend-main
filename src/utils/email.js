@@ -3,17 +3,89 @@ const nodemailer = require('nodemailer');
 let transporter;
 let etherealUser, etherealPass;
 
+// Helper to parse Name and Email from standard "Name" <email@example.com> format
+function parseEmailFrom(emailFromStr) {
+    if (!emailFromStr) return { name: 'Lab7 Support', email: 'noreply@lab7.com' };
+    const emailMatch = emailFromStr.match(/<(.+)>/);
+    const email = emailMatch ? emailMatch[1].trim() : emailFromStr.trim();
+    
+    let name = 'Lab7 Support';
+    const nameMatch = emailFromStr.match(/^[^<]+/);
+    if (nameMatch && emailMatch) {
+        name = nameMatch[0].replace(/['"]/g, '').trim();
+    }
+    return { name, email };
+}
+
+// HTTP API: Brevo (Sendinblue)
+async function sendEmailViaBrevo(apiKey, { to, subject, html }) {
+    if (typeof fetch === 'undefined') {
+        throw new Error('fetch is not defined in this Node environment. Please upgrade Node.js to v18+');
+    }
+    const { name, email } = parseEmailFrom(process.env.EMAIL_FROM);
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+            'accept': 'application/json',
+            'api-key': apiKey,
+            'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+            sender: { name, email },
+            to: [{ email: to }],
+            subject: subject,
+            htmlContent: html
+        })
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Brevo API error: ${response.status} - ${errText}`);
+    }
+    return await response.json();
+}
+
+// HTTP API: Resend
+async function sendEmailViaResend(apiKey, { to, subject, html }) {
+    if (typeof fetch === 'undefined') {
+        throw new Error('fetch is not defined in this Node environment. Please upgrade Node.js to v18+');
+    }
+    const fromStr = process.env.EMAIL_FROM || 'Lab7 Support <onboarding@resend.dev>';
+    const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            from: fromStr,
+            to: [to],
+            subject: subject,
+            html: html
+        })
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Resend API error: ${response.status} - ${errText}`);
+    }
+    return await response.json();
+}
+
 async function getTransporter() {
     if (transporter) return transporter;
 
     // Use real SMTP if configured (e.g. Gmail, Mailgun, SendGrid)
     if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+        const port = parseInt(process.env.SMTP_PORT || '587');
+        const secure = port === 465 || process.env.SMTP_SECURE === 'true';
         transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST,
-            port: parseInt(process.env.SMTP_PORT || '587'),
+            port: port,
+            secure: secure,
             auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
         });
-        console.log(`📧 Using SMTP: ${process.env.SMTP_HOST}`);
+        console.log(`📧 Using SMTP: ${process.env.SMTP_HOST} (port: ${port}, secure: ${secure})`);
         return transporter;
     }
 
@@ -49,6 +121,23 @@ async function getTransporter() {
 
 async function sendEmail({ to, subject, html }) {
     try {
+        // Try Brevo HTTP API first
+        if (process.env.BREVO_API_KEY) {
+            console.log(`📧 Sending email via Brevo HTTP API to ${to}...`);
+            const info = await sendEmailViaBrevo(process.env.BREVO_API_KEY, { to, subject, html });
+            console.log(`📬 Brevo email sent successfully! ID:`, info);
+            return info;
+        }
+
+        // Try Resend HTTP API second
+        if (process.env.RESEND_API_KEY) {
+            console.log(`📧 Sending email via Resend HTTP API to ${to}...`);
+            const info = await sendEmailViaResend(process.env.RESEND_API_KEY, { to, subject, html });
+            console.log(`📬 Resend email sent successfully! ID:`, info);
+            return info;
+        }
+
+        // Fallback to standard SMTP (Gmail/etc.) or Ethereal test mail
         const t = await getTransporter();
         const info = await Promise.race([
             t.sendMail({

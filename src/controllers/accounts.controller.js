@@ -127,23 +127,24 @@ async function register(req, res) {
     if (USE_MYSQL) {
         const { pool } = getDb();
         await pool.query(
-            `INSERT INTO accounts (title,firstName,lastName,email,passwordHash,role,verificationToken,verified) VALUES(?,?,?,?,?,?,?,NOW())`,
+            `INSERT INTO accounts (title,firstName,lastName,email,passwordHash,role,verificationToken,verified) VALUES(?,?,?,?,?,?,?,NULL)`,
             [title||null, firstName, lastName, email, passwordHash, role, verificationToken]
         );
     } else {
         const db = getDb();
         const id = db.accounts.length > 0 ? Math.max(...db.accounts.map(x=>x.id))+1 : 1;
-        db.accounts.push({ id, title:title||null, firstName, lastName, email, passwordHash, role, verificationToken, verified:new Date().toISOString(), resetToken:null, resetTokenExpires:null, created:new Date().toISOString(), updated:null });
+        db.accounts.push({ id, title:title||null, firstName, lastName, email, passwordHash, role, verificationToken, verified:null, resetToken:null, resetTokenExpires:null, created:new Date().toISOString(), updated:null });
         db.save();
     }
 
     sendVerificationEmail(email, getOrigin(req), verificationToken).catch(console.error);
 
-    // Include verification link in response (works even if email is blocked on hosting)
+    // Include verification link in response only if real SMTP is not configured (for dev/demo fallback)
+    const isSmtpConfigured = !!(process.env.SMTP_HOST && process.env.SMTP_USER);
     const verifyUrl = `${getOrigin(req)}/account/verify-email?token=${verificationToken}`;
     res.json({
         message: 'Registration successful — please check your email to verify your account',
-        verificationLink: verifyUrl  // Shown in response for demo/testing purposes
+        ...(isSmtpConfigured ? {} : { verificationLink: verifyUrl })
     });
 }
 
