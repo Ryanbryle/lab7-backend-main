@@ -126,31 +126,35 @@ async function register(req, res) {
 
     const count = await countAccounts();
     const role = count === 0 ? 'Admin' : 'User';
+    const isAdmin = role === 'Admin';
     const passwordHash = bcrypt.hashSync(password, 10);
-    const verificationToken = uuidv4();
+    const verificationToken = isAdmin ? uuidv4() : null;
 
     if (USE_MYSQL) {
         const { pool } = getDb();
         await pool.query(
-            `INSERT INTO accounts (title,firstName,lastName,email,passwordHash,role,verificationToken,verified) VALUES(?,?,?,?,?,?,?,NULL)`,
+            `INSERT INTO accounts (title,firstName,lastName,email,passwordHash,role,verificationToken,verified) VALUES(?,?,?,?,?,?,?,${isAdmin ? 'NULL' : 'NOW()'})`,
             [title||null, firstName, lastName, email, passwordHash, role, verificationToken]
         );
     } else {
         const db = getDb();
         const id = db.accounts.length > 0 ? Math.max(...db.accounts.map(x=>x.id))+1 : 1;
-        db.accounts.push({ id, title:title||null, firstName, lastName, email, passwordHash, role, verificationToken, verified:null, resetToken:null, resetTokenExpires:null, created:new Date().toISOString(), updated:null });
+        db.accounts.push({ id, title:title||null, firstName, lastName, email, passwordHash, role, verificationToken, verified: isAdmin ? null : new Date().toISOString(), resetToken:null, resetTokenExpires:null, created:new Date().toISOString(), updated:null });
         db.save();
     }
 
-    sendVerificationEmail(email, getOrigin(req), verificationToken).catch(console.error);
-
-    // Include verification link in response only if real SMTP is not configured (for dev/demo fallback)
-    const isSmtpConfigured = !!(process.env.SMTP_HOST && process.env.SMTP_USER);
-    const verifyUrl = `${getOrigin(req)}/account/verify-email?token=${verificationToken}`;
-    res.json({
-        message: 'Registration successful — please check your email to verify your account',
-        ...(isSmtpConfigured ? {} : { verificationLink: verifyUrl })
-    });
+    if (isAdmin) {
+        // Only admin needs email verification
+        sendVerificationEmail(email, getOrigin(req), verificationToken).catch(console.error);
+        res.json({
+            message: 'Registration successful — please check your email to verify your account'
+        });
+    } else {
+        // Regular users are auto-verified and can log in immediately
+        res.json({
+            message: 'Registration successful — you can now log in'
+        });
+    }
 }
 
 // ─── POST /accounts/verify-email ─────────────────────────────────────────────
